@@ -41,4 +41,7 @@ node shots.mjs   # renders screenshots
 
 Designed, written, and tested end-to-end by **[Fable 5.1](https://www.anthropic.com)** (claude-fable-5). Every line — engine, AI, ballistics, UI, tests — is model output.
 
+The full agent trajectory (raw Claude Code session log) is published on Hugging Face:
+**[INONONO/tarkov-customs-trajectory](https://huggingface.co/datasets/INONONO/tarkov-customs-trajectory)**
+
 *Not affiliated with Battlestate Games. Escape from Tarkov is their thing; this is a love letter in 192KB.*
