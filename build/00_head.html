@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>CUSTOMS — Escape Raid</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root { --amber:#c9a55a; --dim:#8b8578; --bg:rgba(12,12,10,.86); --red:#b8332a; --green:#5aa35a; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  html,body { width:100%; height:100%; overflow:hidden; background:#000; font-family:"Segoe UI",Roboto,Helvetica,Arial,sans-serif; color:#d8d2c4; user-select:none; }
+  canvas#c { position:fixed; inset:0; display:block; }
+  .screen { position:fixed; inset:0; display:none; }
+  .screen.on { display:block; }
+  .panel { position:absolute; background:var(--bg); border:1px solid #3a372f; padding:14px; backdrop-filter:blur(3px); }
+  h1 { font-weight:300; letter-spacing:6px; font-size:34px; color:var(--amber); }
+  h2 { font-weight:400; letter-spacing:3px; font-size:14px; color:var(--amber); text-transform:uppercase; margin-bottom:8px; border-bottom:1px solid #3a372f; padding-bottom:4px; }
+  h3 { font-size:12px; letter-spacing:2px; color:var(--dim); text-transform:uppercase; margin:10px 0 4px; }
+  button { background:#1f1e1a; border:1px solid #4a463c; color:#d8d2c4; padding:6px 12px; cursor:pointer; font-size:13px; letter-spacing:1px; }
+  button:hover { background:#2e2c25; border-color:var(--amber); }
+  button.primary { background:#3b3220; border-color:var(--amber); color:#f0e2b8; font-size:16px; padding:12px 30px; letter-spacing:4px; }
+  button.primary:hover { background:#54461f; }
+  button:disabled { opacity:.4; cursor:default; }
+  .row { display:flex; gap:8px; align-items:center; }
+  .grow { flex:1; }
+  .small { font-size:11px; color:var(--dim); }
+  .rub { color:#e5c876; }
+  /* ---------- hideout ---------- */
+  #menu #title { left:24px; top:18px; border:none; background:none; }
+  #menu #title .sub { color:var(--dim); font-size:12px; letter-spacing:3px; }
+  #menu #status { right:24px; top:18px; text-align:right; border:none; background:none; font-size:13px; line-height:1.6; }
+  #menu #left { left:24px; top:110px; width:300px; bottom:24px; overflow-y:auto; }
+  #menu #right { right:24px; top:110px; width:380px; bottom:24px; overflow-y:auto; }
+  #menu #bottom { left:50%; transform:translateX(-50%); bottom:30px; border:none; background:none; text-align:center; }
+  .tabs { display:flex; gap:4px; margin-bottom:10px; }
+  .tabs button { flex:1; }
+  .tabs button.active { background:#3b3220; border-color:var(--amber); }
+  .item { display:flex; justify-content:space-between; align-items:center; padding:5px 6px; border:1px solid #2c2a24; margin-bottom:3px; font-size:13px; background:rgba(255,255,255,.02); }
+  .item.sel { border-color:var(--amber); background:rgba(201,165,90,.1); }
+  .item:hover { background:rgba(255,255,255,.06); cursor:pointer; }
+  .item .name { flex:1; }
+  .item .val { color:#e5c876; font-size:12px; margin-left:8px; }
+  .slot { margin-bottom:8px; }
+  .slot .opts { display:flex; flex-wrap:wrap; gap:3px; }
+  .opt { padding:4px 7px; border:1px solid #33312a; font-size:12px; cursor:pointer; background:#171611; }
+  .opt:hover { border-color:#8a7a50; }
+  .opt.eq { border-color:var(--amber); background:#3b3220; color:#f0e2b8; }
+  .opt.locked { opacity:.5; }
+  .opt .p { color:#e5c876; font-size:10px; margin-left:4px; }
+  .stat { display:flex; align-items:center; font-size:12px; margin-bottom:3px; }
+  .stat .l { width:96px; color:var(--dim); }
+  .stat .bar { flex:1; height:8px; background:#1c1b17; border:1px solid #33312a; position:relative; }
+  .stat .bar i { position:absolute; left:0; top:0; bottom:0; background:var(--amber); }
+  .stat .bar i.bad { background:var(--red); }
+  .stat .v { width:52px; text-align:right; }
+  .delta { font-size:11px; margin-left:4px; }
+  .delta.good { color:var(--green); } .delta.bad { color:#d86a5a; }
+  /* ---------- HUD ---------- */
+  #hud { pointer-events:none; }
+  #xh { position:absolute; left:50%; top:50%; width:4px; height:4px; margin:-2px 0 0 -2px; border-radius:50%; background:rgba(255,255,255,.75); box-shadow:0 0 2px #000; }
+  #xh.ads { opacity:0; }
+  #hitm { position:absolute; left:50%; top:50%; width:22px; height:22px; margin:-11px 0 0 -11px; opacity:0; transition:opacity .25s; }
+  #hitm:before,#hitm:after { content:""; position:absolute; left:50%; top:0; width:2px; height:100%; background:#fff; transform:translateX(-50%) rotate(45deg); }
+  #hitm:after { transform:translateX(-50%) rotate(-45deg); }
+  #hitm.kill:before,#hitm.kill:after { background:#e04a3a; }
+  #vig { position:absolute; inset:0; background:radial-gradient(ellipse at center, rgba(0,0,0,0) 55%, rgba(160,0,0,.0) 100%); opacity:0; }
+  #dmgflash { position:absolute; inset:0; background:radial-gradient(ellipse at center, rgba(180,0,0,0) 40%, rgba(180,0,0,.55) 100%); opacity:0; }
+  #hp { position:absolute; left:22px; bottom:22px; background:var(--bg); border:1px solid #3a372f; padding:8px 10px; width:210px; font-size:12px; }
+  #hp .body { display:grid; grid-template-columns:1fr 1fr 1fr; grid-template-rows:auto; gap:2px; width:100px; margin:4px auto; }
+  .part { height:16px; background:#4b8a4b; border:1px solid #111; font-size:9px; text-align:center; line-height:14px; color:#fff; text-shadow:0 0 2px #000; }
+  .part.head { grid-column:2; height:14px; }
+  .part.larm { grid-column:1; grid-row:2; }
+  .part.thorax { grid-column:2; grid-row:2; height:20px; }
+  .part.rarm { grid-column:3; grid-row:2; }
+  .part.stomach { grid-column:2; grid-row:3; height:14px; }
+  .part.lleg { grid-column:1; grid-row:4; height:22px; }
+  .part.rleg { grid-column:3; grid-row:4; height:22px; }
+  #hp .meter { height:6px; background:#1c1b17; border:1px solid #33312a; margin-top:4px; position:relative; }
+  #hp .meter i { position:absolute; left:0; top:0; bottom:0; }
+  #stam i { background:#7fa3c7; }
+  #hpbar i { background:#6a9b52; }
+  #effects { min-height:14px; color:#e08a5a; font-size:11px; margin-top:4px; }
+  #ammo { position:absolute; right:22px; bottom:22px; background:var(--bg); border:1px solid #3a372f; padding:8px 14px; text-align:right; min-width:180px; }
+  #ammo .n { font-size:30px; font-weight:300; color:#f0e2b8; letter-spacing:2px; }
+  #ammo .n span { font-size:14px; color:var(--dim); }
+  #ammo .w { font-size:12px; color:var(--dim); letter-spacing:1px; }
+  #ammo .m { font-size:11px; color:var(--amber); letter-spacing:2px; }
+  #timer { position:absolute; right:22px; top:18px; background:var(--bg); border:1px solid #3a372f; padding:6px 14px; font-size:20px; font-weight:300; letter-spacing:3px; color:#f0e2b8; text-align:right; }
+  #timer .small { display:block; letter-spacing:1px; }
+  #compass { position:absolute; left:50%; top:14px; width:360px; height:26px; margin-left:-180px; overflow:hidden; background:rgba(0,0,0,.45); border:1px solid #3a372f; }
+  #compass .strip { position:absolute; top:0; left:0; height:100%; white-space:nowrap; font-size:11px; color:#d8d2c4; }
+  #compass .strip span { position:absolute; top:5px; transform:translateX(-50%); }
+  #compass .strip span.card { color:var(--amber); font-weight:bold; }
+  #compass:after { content:""; position:absolute; left:50%; top:0; width:1px; height:100%; background:var(--amber); }
+  #prompt { position:absolute; left:50%; top:58%; transform:translateX(-50%); font-size:14px; letter-spacing:1px; color:#f0e2b8; text-shadow:0 0 4px #000; white-space:nowrap; }
+  #prompt b { display:inline-block; border:1px solid #b9a469; padding:0 5px; margin-right:6px; font-size:12px; }
+  #pbar { position:absolute; left:50%; top:63%; width:200px; height:6px; margin-left:-100px; background:rgba(0,0,0,.5); border:1px solid #5a5548; display:none; }
+  #pbar i { display:block; height:100%; background:var(--amber); width:0; }
+  #pbar span { position:absolute; left:0; right:0; top:8px; text-align:center; font-size:11px; letter-spacing:2px; color:#f0e2b8; }
+  #notify { position:absolute; left:22px; top:18px; font-size:13px; }
+  #notify div { background:rgba(0,0,0,.6); border-left:2px solid var(--amber); padding:4px 8px; margin-bottom:4px; animation:fade 4s forwards; }
+  @keyframes fade { 0%{opacity:0} 8%{opacity:1} 80%{opacity:1} 100%{opacity:0} }
+  #extracts { position:absolute; left:22px; top:80px; background:var(--bg); border:1px solid #3a372f; padding:8px 12px; font-size:12px; display:none; }
+  #extracts h3 { margin-top:0; }
+  #extracts div.ex { padding:2px 0; }
+  #extracts div.ex.closed { color:#7a4a4a; text-decoration:line-through; }
+  #loot { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:380px; background:var(--bg); border:1px solid #3a372f; padding:12px; display:none; font-size:13px; }
+  #loot .li { display:flex; justify-content:space-between; padding:4px 6px; border-bottom:1px solid #2a2823; }
+  #loot .li .k { color:var(--amber); width:22px; }
+  #loot .li .n { flex:1; }
+  #loot .li .v { color:#e5c876; }
+  #loot .li.full { color:#7a5a5a; }
+  #inv { position:absolute; right:22px; top:80px; width:300px; background:var(--bg); border:1px solid #3a372f; padding:12px; display:none; font-size:12px; max-height:70%; overflow:auto; }
+  #inv .li { display:flex; justify-content:space-between; padding:3px 4px; border-bottom:1px solid #2a2823; }
+  #scope { position:absolute; inset:0; display:none; background:radial-gradient(circle at center, rgba(0,0,0,0) 0, rgba(0,0,0,0) 27%, rgba(0,0,0,1) 31%); }
+  #scope:before,#scope:after { content:""; position:absolute; left:50%; top:50%; background:rgba(0,0,0,.9); }
+  #scope:before { width:1px; height:56%; transform:translate(-50%,-50%); }
+  #scope:after { height:1px; width:56%; transform:translate(-50%,-50%); }
+  #scope .dot { position:absolute; left:50%; top:50%; width:5px; height:5px; margin:-2.5px 0 0 -2.5px; background:#c9302a; border-radius:50%; }
+  /* ---------- end screen ---------- */
+  #end .panel { left:50%; top:50%; transform:translate(-50%,-50%); width:520px; text-align:center; padding:28px; }
+  #end h1 { margin-bottom:6px; }
+  #end #endSub { color:var(--dim); letter-spacing:2px; margin-bottom:14px; }
+  #end .stats { display:grid; grid-template-columns:1fr 1fr; gap:6px 20px; text-align:left; font-size:13px; margin:14px 0; }
+  #end .stats span:nth-child(2n) { text-align:right; color:#f0e2b8; }
+  #end #endLoot { max-height:180px; overflow:auto; text-align:left; font-size:12px; margin:8px 0 14px; border:1px solid #2a2823; padding:6px; }
+  #start { left:50%; top:50%; transform:translate(-50%,-50%); text-align:center; padding:30px 40px; }
+  #start .keys { text-align:left; font-size:12px; color:var(--dim); columns:2; margin:16px 0; line-height:1.7; }
+  #start .keys b { color:#d8d2c4; display:inline-block; width:70px; }
+  #paused { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); text-align:center; display:none; background:var(--bg); border:1px solid #3a372f; padding:24px 40px; }
+  #paused .small { margin-top:8px; }
+  #fps { position:absolute; left:240px; bottom:22px; font-size:10px; color:#555; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<!-- ============ HIDEOUT / MENU ============ -->
+<div id="menu" class="screen">
+  <div id="title" class="panel"><h1>CUSTOMS</h1><div class="sub">TERMINAL &middot; PMC HIDEOUT</div></div>
+  <div id="status" class="panel">
+    <div>Roubles: <span class="rub" id="rubles">0 ₽</span></div>
+    <div class="small">Raids <span id="stRaids">0</span> · Survived <span id="stSurv">0</span> · Kills <span id="stKills">0</span> · Survival rate <span id="stRate">0%</span></div>
+    <div class="small" id="scavTimer"></div>
+  </div>
+  <div id="left" class="panel">
+    <div class="tabs"><button data-tab="weapons" class="active">Weapons</button><button data-tab="gear">Gear</button><button data-tab="stash">Stash</button></div>
+    <div id="tab-weapons">
+      <h2>Your weapons</h2>
+      <div id="weaponList"></div>
+      <h3>Trader — buy weapon</h3>
+      <div id="weaponShop"></div>
+    </div>
+    <div id="tab-gear" style="display:none">
+      <h2>Equipment</h2>
+      <div id="gearList"></div>
+      <h3>Medical &amp; supplies (taken into raid)</h3>
+      <div id="supplyList"></div>
+    </div>
+    <div id="tab-stash" style="display:none">
+      <h2>Stash <span class="small" id="stashCount"></span></h2>
+      <div class="row" style="margin-bottom:8px"><button id="sellAll">Sell everything</button><span class="small grow" id="stashTotal"></span></div>
+      <div id="stashList"></div>
+    </div>
+  </div>
+  <div id="right" class="panel">
+    <h2 id="modTitle">Modding</h2>
+    <div id="modSlots"></div>
+    <h3>Ammunition</h3>
+    <div id="ammoOpts" class="opts" style="display:flex;flex-wrap:wrap;gap:3px"></div>
+    <h3>Stats</h3>
+    <div id="stats"></div>
+  </div>
+  <div id="bottom" class="panel">
+    <button class="primary" id="deploy">DEPLOY TO CUSTOMS</button>
+    <div class="small" style="margin-top:8px" id="deployInfo"></div>
+    <div class="small" style="margin-top:4px"><button id="scavRun" style="font-size:11px">Scav run (random cheap loadout, keep only loot)</button> <button id="resetSave" style="font-size:11px">Reset profile</button></div>
+  </div>
+</div>
+
+<!-- ============ START ============ -->
+<div id="startScreen" class="screen on">
+  <div id="start" class="panel">
+    <h1>CUSTOMS</h1>
+    <div class="small" style="letter-spacing:3px;margin-top:4px">A HARDCORE RAID · SURVIVE · LOOT · EXTRACT</div>
+    <div class="keys">
+      <div><b>WASD</b> move</div><div><b>Shift</b> sprint</div><div><b>C</b> crouch</div><div><b>Space</b> jump</div>
+      <div><b>Mouse</b> aim / fire</div><div><b>RMB</b> aim down sights</div><div><b>R</b> reload</div><div><b>B</b> fire mode</div>
+      <div><b>Q / E</b> lean</div><div><b>F</b> interact / loot</div><div><b>Tab</b> inventory</div><div><b>O</b> extracts</div>
+      <div><b>4 / 5 / 6</b> bandage / medkit / painkiller</div><div><b>1 / 2</b> primary / secondary</div><div><b>Esc</b> release mouse</div>
+    </div>
+    <button class="primary" id="startBtn">ENTER HIDEOUT</button>
+    <div class="small" style="margin-top:10px">Click to enable audio. Chrome / Edge / Firefox desktop recommended.</div>
+  </div>
+</div>
+
+<!-- ============ HUD ============ -->
+<div id="hud" class="screen">
+  <div id="vig"></div><div id="dmgflash"></div>
+  <div id="scope"><div class="dot"></div></div>
+  <div id="xh"></div><div id="hitm"></div>
+  <div id="compass"><div class="strip"></div></div>
+  <div id="timer"><span id="tval">20:00</span><span class="small" id="tsub">RAID TIME</span></div>
+  <div id="notify"></div>
+  <div id="extracts"><h3>Extraction points</h3><div id="exList"></div></div>
+  <div id="hp">
+    <div class="row"><span class="grow">HEALTH</span><span id="hpn">440/440</span></div>
+    <div class="body">
+      <div class="part head" id="p-head"></div><div class="part larm" id="p-larm"></div><div class="part thorax" id="p-thorax"></div>
+      <div class="part rarm" id="p-rarm"></div><div class="part stomach" id="p-stomach"></div><div class="part lleg" id="p-lleg"></div><div class="part rleg" id="p-rleg"></div>
+    </div>
+    <div class="meter" id="hpbar"><i></i></div>
+    <div class="meter" id="stam"><i></i></div>
+    <div id="effects"></div>
+    <div class="small" id="wgt"></div>
+  </div>
+  <div id="ammo"><div class="w" id="wname">—</div><div class="n"><span id="mag">0</span> <span id="res">/ 0</span></div><div class="m" id="fmode">—</div></div>
+  <div id="prompt"></div>
+  <div id="pbar"><i></i><span></span></div>
+  <div id="loot"></div>
+  <div id="inv"></div>
+  <div id="paused"><h2>MOUSE RELEASED</h2><div>Click to resume — the raid keeps running.</div><div class="small">Press <b>Backspace</b> to abandon the raid (counts as death).</div></div>
+  <div id="fps"></div>
+</div>
+
+<!-- ============ END ============ -->
+<div id="end" class="screen">
+  <div class="panel">
+    <h1 id="endTitle">KILLED IN ACTION</h1>
+    <div id="endSub"></div>
+    <div class="stats" id="endStats"></div>
+    <div id="endLoot"></div>
+    <button class="primary" id="endBtn">RETURN TO HIDEOUT</button>
+  </div>
+</div>
+
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+               "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/" } }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
