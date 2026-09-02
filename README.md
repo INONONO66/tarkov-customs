@@ -2,7 +2,7 @@
 
 > A Tarkov-style first-person extraction shooter. **One HTML file. Zero dependencies. Written entirely by Fable 5.1.**
 
-Open `customs.html` in a browser. That's the whole install.
+**[▶ Play it now](https://inonono66.github.io/tarkov-customs/)** — or open `customs.html` in a browser. That's the whole install.
 
 ![Raid](shots/raid.png)
 
